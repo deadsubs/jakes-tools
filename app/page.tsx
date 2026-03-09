@@ -10,12 +10,11 @@ export default function HomePage() {
       <div className="max-w-3xl w-full">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-black uppercase tracking-widest" style={{ fontFamily: "Titillium Web, sans-serif" }}>
-            Jake's <span style={{ color: F1_RED }}>Tools</span>
+            F1 Simulator <span style={{ color: F1_RED }}>Alpha</span>
           </h1>
           <p className="mt-3 text-white/50 text-lg">A collection of fun interactive tools</p>
           <div className="mt-4 h-px w-16 mx-auto" style={{ background: F1_RED }} />
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Single Season */}
           <Link href="/single-season" className="group block">
@@ -24,7 +23,7 @@ export default function HomePage() {
               style={{
                 background: PANEL_BG,
                 borderColor: F1_RED,
-                boxShadow: `0 0 24px rgba(225,6,0,0.15)`,
+                boxShadow: "0 0 24px rgba(225,6,0,0.15)",
               }}
             >
               <div className="text-3xl mb-4">🏎️</div>
@@ -42,7 +41,6 @@ export default function HomePage() {
               </div>
             </div>
           </Link>
-
           {/* Franchise Mode */}
           <Link href="/simulator" className="group block">
             <div
@@ -50,7 +48,7 @@ export default function HomePage() {
               style={{
                 background: PANEL_BG,
                 borderColor: "#3671C6",
-                boxShadow: `0 0 24px rgba(54,113,198,0.15)`,
+                boxShadow: "0 0 24px rgba(54,113,198,0.15)",
               }}
             >
               <div className="text-3xl mb-4">🏆</div>
