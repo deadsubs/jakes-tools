@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import Link from "next/link";
 import { TEAMS, DRIVERS, RACES, SIMULATION_MODES } from "@/lib/f1Data";
 import { simulateSingleRace } from "@/lib/simulationEngine";
 
@@ -609,6 +610,17 @@ function RaceRevealScreen({
         className="sticky top-0 z-30 border-b"
         style={{ background: BG_DARK + "f0", borderColor: PANEL_BORDER, backdropFilter: "blur(8px)" }}
       >
+        {/* Site nav row */}
+        <div className="max-w-5xl mx-auto px-4 pt-2 pb-1 flex items-center justify-between">
+          <Link href="/" className="text-white/40 text-xs hover:text-white/70 transition-colors">← Jake's Tools</Link>
+          <Link
+            href="/simulator"
+            className="text-xs font-bold px-3 py-1 rounded border transition-all hover:bg-white/10"
+            style={{ borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.6)" }}
+          >
+            Franchise Mode →
+          </Link>
+        </div>
         {/* Race header row */}
         <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
