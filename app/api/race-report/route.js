@@ -2,7 +2,7 @@ const ANTHROPIC_VERSION = "2023-06-01";
 const MODEL = "claude-haiku-4-5-20251001";
 
 function fallbackCommentary(raceName, season, winnerName) {
-  return `${raceName} ${season} delivered another chapter of the season. ${winnerName || "The winner"} took the chequered flag after a competitive race. The result shakes up the championship order as the calendar moves on.`;
+  return raceName + " " + season + " delivered another chapter of the season. " + (winnerName || "The winner") + " took the chequered flag after a competitive race. The result shakes up the championship order as the calendar moves on.";
 }
 
 function buildUserMessage(body) {
@@ -13,7 +13,6 @@ function buildUserMessage(body) {
     round,
     totalRounds = 24,
     driverStandings = [],
-    constructorStandings = [],
     previousRaceWinner,
     focusDriverId,
     drivers = [],
@@ -22,54 +21,59 @@ function buildUserMessage(body) {
 
   const getDriver = (id) => drivers.find((d) => d.id === id);
   const getTeam = (id) => teams.find((t) => t.id === id);
-  const raceName = raceResult?.name ?? raceResult?.raceName ?? `Round ${round}`;
+  const raceName = (raceResult && (raceResult.name || raceResult.raceName)) || ("Round " + round);
 
-  const top5Quali = qualifyingOrder.slice(0, 5).map((id, i) => `${i + 1}. ${getDriver(id)?.name ?? id}`).join(", ") || "—";
-  const winner = raceResult?.results?.[0];
-  const winnerName = winner ? getDriver(winner.driverId)?.name : null;
-  const winnerTeam = winner ? getTeam(winner.teamId)?.name : null;
+  const top5Quali = qualifyingOrder.slice(0, 5).map((id, i) => (i + 1) + ". " + ((getDriver(id) || {}).name || id)).join(", ") || "—";
+
+  const winner = raceResult && raceResult.results && raceResult.results[0];
+  const winnerName = winner ? (getDriver(winner.driverId) || {}).name || null : null;
+  const winnerTeam = winner ? (getTeam(winner.teamId) || {}).name || null : null;
   const qualiPosWinner = winner ? qualifyingOrder.indexOf(winner.driverId) + 1 : "—";
-  const podium = (raceResult?.results ?? []).slice(0, 3).map((r) => getDriver(r.driverId)?.name ?? r.driverId).join(", ") || "—";
-  const top10 = (raceResult?.results ?? []).slice(0, 10).map((r, i) => `${i + 1}. ${getDriver(r.driverId)?.name ?? r.driverId} (${getTeam(r.teamId)?.name ?? ""})`).join("; ") || "—";
-  const dnfs = (raceResult?.results ?? []).filter((r) => r.dnf).map((r) => `${getDriver(r.driverId)?.name ?? r.driverId}${r.dnfReason ? ` (${r.dnfReason})` : ""}).join("; ") || "None";
-  const weather = (raceResult?.weather ?? "dry").charAt(0).toUpperCase() + (raceResult?.weather ?? "dry").slice(1);
-  const safetyCar = raceResult?.safetyCarDeployed ? "yes" : "no";
 
-  const biggestMoverId = raceResult?.biggestMover;
-  const biggestMoverName = biggestMoverId ? getDriver(biggestMoverId)?.name : "—";
-  const overtakeCount = raceResult?.overtakeCount ?? {};
-  const biggestMoverGain = biggestMoverId ? (overtakeCount[biggestMoverId] ?? 0) : 0;
+  const results = (raceResult && raceResult.results) || [];
+  const p1Name = results[0] ? (getDriver(results[0].driverId) || {}).name || "—" : "—";
+  const p2Name = results[1] ? (getDriver(results[1].driverId) || {}).name || "—" : "—";
+  const p3Name = results[2] ? (getDriver(results[2].driverId) || {}).name || "—" : "—";
 
-  const driverOfDayId = raceResult?.driverOfDay ?? biggestMoverId;
-  const driverOfDayName = driverOfDayId ? getDriver(driverOfDayId)?.name : "—";
+  const top10 = results.slice(0, 10).map((r, i) => (i + 1) + ". " + ((getDriver(r.driverId) || {}).name || r.driverId) + " (" + ((getTeam(r.teamId) || {}).name || "") + ")").join("; ") || "—";
+  const dnfs = results.filter((r) => r.dnf).map((r) => ((getDriver(r.driverId) || {}).name || r.driverId) + (r.dnfReason ? " (" + r.dnfReason + ")" : "")).join("; ") || "None";
 
-  const focusResult = focusDriverId ? (raceResult?.results ?? []).find((r) => r.driverId === focusDriverId) : null;
-  const focusName = focusDriverId ? getDriver(focusDriverId)?.name : "—";
+  const weather = raceResult && raceResult.weather ? raceResult.weather.charAt(0).toUpperCase() + raceResult.weather.slice(1) : "Dry";
+  const safetyCar = raceResult && raceResult.safetyCarDeployed ? "yes" : "no";
+
+  const biggestMoverId = raceResult && raceResult.biggestMover;
+  const biggestMoverName = biggestMoverId ? (getDriver(biggestMoverId) || {}).name || "—" : "—";
+  const overtakeCount = (raceResult && raceResult.overtakeCount) || {};
+  const biggestMoverGain = biggestMoverId ? (overtakeCount[biggestMoverId] || 0) : 0;
+
+  const driverOfDayId = (raceResult && raceResult.driverOfDay) || biggestMoverId;
+  const driverOfDayName = driverOfDayId ? (getDriver(driverOfDayId) || {}).name || "—" : "—";
+
+  const focusResult = focusDriverId ? results.find((r) => r.driverId === focusDriverId) : null;
+  const focusName = focusDriverId ? (getDriver(focusDriverId) || {}).name || "—" : "—";
   const focusQualiPos = focusDriverId ? qualifyingOrder.indexOf(focusDriverId) + 1 : "—";
-  const focusFinishPos = focusResult?.position ?? "—";
+  const focusFinishPos = focusResult ? focusResult.position : "—";
 
   const leader = driverStandings[0];
-  const leaderName = leader ? getDriver(leader.driverId)?.name : "—";
-  const leaderPts = leader?.points ?? 0;
-  const p2 = driverStandings[1];
-  const p2Name = p2 ? getDriver(p2.driverId)?.name : "—";
-  const p2Pts = p2?.points ?? 0;
+  const leaderName = leader ? (getDriver(leader.driverId) || {}).name || "—" : "—";
+  const leaderPts = leader ? leader.points || 0 : 0;
+  const p2standing = driverStandings[1];
+  const p2standingName = p2standing ? (getDriver(p2standing.driverId) || {}).name || "—" : "—";
+  const p2standingPts = p2standing ? p2standing.points || 0 : 0;
 
-  return `Write a race report for the ${raceName}, Round ${round} of ${totalRounds}, ${season} season.
-
-Qualifying: ${top5Quali}
-Race winner: ${winnerName ?? "—"} (${winnerTeam ?? "—"}) from P${qualiPosWinner}
-Podium: P1 ${(raceResult?.results ?? [])[0] ? getDriver(raceResult.results[0].driverId)?.name : "—"}, P2 ${(raceResult?.results ?? [])[1] ? getDriver(raceResult.results[1].driverId)?.name : "—"}, P3 ${(raceResult?.results ?? [])[2] ? getDriver(raceResult.results[2].driverId)?.name : "—"}
-Top 10: ${top10}
-DNFs: ${dnfs}
-Weather: ${weather}
-Safety car: ${safetyCar}
-Biggest mover: ${biggestMoverName} (+${biggestMoverGain} positions)
-Driver of the day: ${driverOfDayName}
-Focus driver ${focusName}: started P${focusQualiPos}, finished P${focusFinishPos}
-Championship after round ${round}: ${leaderName} leads on ${leaderPts}pts, ${p2Name} on ${p2Pts}pts
-
-Write exactly 2 paragraphs, max 180 words total.`;
+  return "Write a race report for the " + raceName + ", Round " + round + " of " + totalRounds + ", " + season + " season.\n\n" +
+    "Qualifying: " + top5Quali + "\n" +
+    "Race winner: " + (winnerName || "—") + " (" + (winnerTeam || "—") + ") from P" + qualiPosWinner + "\n" +
+    "Podium: P1 " + p1Name + ", P2 " + p2Name + ", P3 " + p3Name + "\n" +
+    "Top 10: " + top10 + "\n" +
+    "DNFs: " + dnfs + "\n" +
+    "Weather: " + weather + "\n" +
+    "Safety car: " + safetyCar + "\n" +
+    "Biggest mover: " + biggestMoverName + " (+" + biggestMoverGain + " positions)\n" +
+    "Driver of the day: " + driverOfDayName + "\n" +
+    "Focus driver " + focusName + ": started P" + focusQualiPos + ", finished P" + focusFinishPos + "\n" +
+    "Championship after round " + round + ": " + leaderName + " leads on " + leaderPts + "pts, " + p2standingName + " on " + p2standingPts + "pts\n\n" +
+    "Write exactly 2 paragraphs, max 180 words total.";
 }
 
 export async function POST(request) {
@@ -80,20 +84,17 @@ export async function POST(request) {
     return Response.json({ commentary: fallbackCommentary("Race", new Date().getFullYear(), null) }, { status: 200 });
   }
 
-  const systemPrompt =
-    "You are an F1 race commentator writing for a simulator app in the style of Sky Sports F1. Be dramatic, specific, and engaging. Reference real F1 storytelling tropes. Always mention the race winner, key battles, and championship implications.";
+  const systemPrompt = "You are an F1 race commentator writing for a simulator app in the style of Sky Sports F1. Be dramatic, specific, and engaging. Reference real F1 storytelling tropes. Always mention the race winner, key battles, and championship implications.";
 
   const userContent = buildUserMessage(body);
-
   const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  const raceName = (body.raceResult && (body.raceResult.name || body.raceResult.raceName)) || ("Round " + (body.round || "?"));
+  const winnerRaw = body.raceResult && body.raceResult.results && body.raceResult.results[0];
+  const winnerName = winnerRaw ? ((body.drivers || []).find((d) => d.id === winnerRaw.driverId) || {}).name || null : null;
+
   if (!apiKey) {
-    const raceName = body.raceResult?.name ?? body.raceResult?.raceName ?? `Round ${body.round ?? "?"}`;
-    const winner = body.raceResult?.results?.[0];
-    const drivers = body.drivers ?? [];
-    const winnerName = winner ? drivers.find((d) => d.id === winner.driverId)?.name : null;
-    return Response.json({
-      commentary: fallbackCommentary(raceName, body.season ?? new Date().getFullYear(), winnerName),
-    }, { status: 200 });
+    return Response.json({ commentary: fallbackCommentary(raceName, body.season || new Date().getFullYear(), winnerName) }, { status: 200 });
   }
 
   try {
@@ -113,34 +114,15 @@ export async function POST(request) {
     });
 
     if (!res.ok) {
-      const raceName = body.raceResult?.name ?? body.raceResult?.raceName ?? "Race";
-      const winner = body.raceResult?.results?.[0];
-      const drivers = body.drivers ?? [];
-      const winnerName = winner ? drivers.find((d) => d.id === winner.driverId)?.name : null;
-      return Response.json({
-        commentary: fallbackCommentary(raceName, body.season ?? new Date().getFullYear(), winnerName),
-      }, { status: 200 });
+      return Response.json({ commentary: fallbackCommentary(raceName, body.season || new Date().getFullYear(), winnerName) }, { status: 200 });
     }
 
     const data = await res.json();
-    const text = data.content?.find((c) => c.type === "text")?.text;
-    const commentary =
-      typeof text === "string" && text.trim()
-        ? text.trim()
-        : fallbackCommentary(
-            body.raceResult?.name ?? body.raceResult?.raceName ?? "Race",
-            body.season ?? new Date().getFullYear(),
-            body.drivers?.find((d) => d.id === body.raceResult?.results?.[0]?.driverId)?.name
-          );
-
+    const textBlock = data.content && data.content.find((c) => c.type === "text");
+    const text = textBlock && textBlock.text;
+    const commentary = typeof text === "string" && text.trim() ? text.trim() : fallbackCommentary(raceName, body.season || new Date().getFullYear(), winnerName);
     return Response.json({ commentary });
-  } catch (err) {
-    const raceName = body?.raceResult?.name ?? body?.raceResult?.raceName ?? "Race";
-    const season = body?.season ?? new Date().getFullYear();
-    const winner = body?.raceResult?.results?.[0];
-    const winnerName = winner && body?.drivers ? body.drivers.find((d) => d.id === winner.driverId)?.name : null;
-    return Response.json({
-      commentary: fallbackCommentary(raceName, season, winnerName),
-    }, { status: 200 });
+  } catch {
+    return Response.json({ commentary: fallbackCommentary(raceName, (body && body.season) || new Date().getFullYear(), winnerName) }, { status: 200 });
   }
 }
