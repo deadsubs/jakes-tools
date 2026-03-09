@@ -558,13 +558,13 @@ function SetupScreen({ onBegin, simulationMode, setSimulationMode, focusDriverId
               <div className="grid grid-cols-2 gap-3">
                 <button type="button" onClick={() => onBegin("racebyrace")}
                   className="py-4 font-black uppercase tracking-wider rounded transition-all hover:opacity-90 border-2"
-                  style={{ background: "transparent", borderColor: F1_RED, color: F1_RED }}>
-                  Race by Race
+                  style={{ background: F1_RED }}>
+                  Race by Race →
                 </button>
                 <button type="button" onClick={() => onBegin("full")}
                   className="py-4 font-black uppercase tracking-wider text-white rounded transition-all hover:opacity-90"
-                  style={{ background: F1_RED }}>
-                  Full Season →
+                  style={{ background: "transparent", borderColor: F1_RED, color: F1_RED}}>
+                  Full Season
                 </button>
               </div>
               <p className="text-white/30 text-xs text-center">
@@ -803,6 +803,53 @@ function RadioCard({ driver, team, text, label }) {
 }
 
 // ─── RACE DASHBOARD (reusable — live race + finale races tab) ─────────────
+function RaceReportBody({ text }) {
+  if (!text) return null;
+
+  const sentences = text
+    .split(/\n\n|\n/)
+    .flatMap((block) =>
+      block
+        .split(/(?<=\.)\s+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    );
+
+  function iconFor(s) {
+    const l = s.toLowerCase();
+    if (l.includes("power unit"))                                                return "🔥";
+    if (l.includes("engine"))                                                    return "🔥";
+    if (l.includes("collision") || l.includes("contact") || l.includes("incident")) return "💥";
+    if (l.includes("puncture") || l.includes("blowout"))                        return "🔴";
+    if (l.includes("hydraulic"))                                                 return "⚠️";
+    if (l.includes("gearbox"))                                                   return "⚙️";
+    if (l.includes("suspension"))                                                return "🔧";
+    if (l.includes("brake"))                                                     return "🛑";
+    if (l.includes("electrical"))                                                return "⚡";
+    if (l.includes("retired") || l.includes("retirement") || l.includes("retire")) return "🚩";
+    if (l.includes("safety car") || l.includes("virtual safety"))               return "🟡";
+    if (l.includes("wet") || l.includes("rain") || l.includes("intermediate"))  return "🌧️";
+    if (l.includes("pole") || l.includes("qualifying"))                         return "⏱️";
+    if (l.includes("champion") || l.includes("title") || l.includes("standings")) return "🏆";
+    if (l.includes("fastest lap"))                                               return "⚡";
+    if (l.includes("driver of the day"))                                         return "⭐";
+    if (l.includes("overtake") || l.includes("passed") || l.includes("charging")) return "🔁";
+    if (l.includes("pit stop") || l.includes("strategy") || l.includes("tyre")) return "🔩";
+    if (l.includes("victory") || l.includes("winner") || l.includes("podium"))  return "🥇";
+    return "▸";
+  }
+
+  return (
+    <div className="space-y-3">
+      {sentences.map((s, i) => (
+        <div key={i} className="flex gap-2.5 items-start">
+          <span className="shrink-0 mt-0.5 text-sm w-5 text-center">{iconFor(s)}</span>
+          <p className="text-white/85 text-sm leading-relaxed">{s}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 function RaceDashboard({ raceResult, round, race, drivers, focusDriverId, reportContent, reportLoading, radioWinner, radioFocus, radioLoading, onGenerateReport }) {
   const [tab, setTab] = useState("qualifying");
   const trackTemp = useMemo(() => getTrackTemp(race, raceResult?.weather), [race, raceResult?.weather]);
@@ -1026,9 +1073,40 @@ function DriverPointsBar({ seasonResults, driverId, teamColor, drivers }) {
     </div>
   );
 }
-
+function RaceActionBar({ round, totalRounds, onNextRace, onSimulateToEnd, onFinishSeason }) {
+  const isLast = round >= totalRounds;
+  return (
+    <div className="sticky top-0 z-40 border-b" style={{ background: BG_DARK + "f5", borderColor: PANEL_BORDER, backdropFilter: "blur(8px)" }}>
+      <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
+        {isLast ? (
+          <button type="button" onClick={onFinishSeason}
+            className="flex-1 py-2.5 font-black uppercase tracking-wider text-white rounded text-sm hover:opacity-90 transition-all"
+            style={{ background: F1_RED }}>
+            View Championship Finale →
+          </button>
+        ) : (
+          <>
+            <button type="button" onClick={onNextRace}
+              className="flex-1 py-2.5 font-black uppercase tracking-wider text-white rounded text-sm hover:opacity-90 transition-all"
+              style={{ background: F1_RED }}>
+              {"Next Race: R" + (round + 1) + " →"}
+            </button>
+            <button type="button" onClick={onSimulateToEnd}
+              className="py-2.5 px-5 font-black uppercase tracking-wider rounded text-sm hover:opacity-90 transition-all border-2 whitespace-nowrap"
+              style={{ background: "transparent", borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.6)" }}>
+              Simulate to End
+            </button>
+            <span className="text-white/25 text-xs whitespace-nowrap shrink-0">
+              {(totalRounds - round) + " left"}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 // ─── RACE REVEAL SCREEN ───────────────────────────────────────────────────
-function RaceRevealScreen({ raceResult, round, race, driverStandings, constructorStandings, previousRaceWinner, focusDriverId, seasonResults, onNextRace, onFinishSeason, onSimulateToEnd }) {
+function RaceRevealScreen({ raceResult, round, race, driverStandings, constructorStandings, previousRaceWinner, focusDriverId, seasonResults, onNextRace, onFinishSeason, onSimulateToEnd, onRestartSeason}) {
   const drivers = getActiveDrivers(DRIVERS);
   const [activeTab, setActiveTab] = useState("qualifying");
   const [report, setReport] = useState(null);
@@ -1083,7 +1161,10 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
       {/* Sticky header */}
       <div className="sticky top-0 z-30 border-b" style={{ background: BG_DARK + "f0", borderColor: PANEL_BORDER, backdropFilter: "blur(8px)" }}>
         <div className="max-w-5xl mx-auto px-4 pt-2 pb-1 flex items-center justify-between">
-          <Link href="/" className="text-white/40 text-xs hover:text-white/70 transition-colors">← Jake's Tools</Link>
+          <button type="button" onClick={onRestartSeason}
+     className="text-white/40 text-xs hover:text-white/70 transition-colors">
+     ↺ Restart Season
+   </button>
           <Link href="/simulator" className="text-xs font-bold px-3 py-1 rounded border transition-all hover:bg-white/10" style={{ borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.6)" }}>Franchise Mode →</Link>
         </div>
         <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-4 flex-wrap">
@@ -1245,11 +1326,11 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
             })()}
             <div className="rounded-lg border overflow-hidden" style={{ background: PANEL_BG, borderColor: PANEL_BORDER }}>
               <div className="px-4 py-2.5 border-b" style={{ borderColor: PANEL_BORDER }}><span className="text-xs font-black tracking-widest" style={{ color: F1_RED }}>RACE REPORT</span></div>
-              <div className="p-5 pl-9 relative" style={{ background: "#0e0e22" }}>
-                <span className="absolute left-4 top-4 text-3xl font-black leading-none" style={{ color: F1_RED }}>"</span>
+              <div className="p-5" style={{ background: "#0e0e22" }}>
+                
                 {reportLoading
                   ? <div className="animate-pulse space-y-2">{[1, 0.9, 0.8, 1, 0.75].map((w, i) => <div key={i} className="h-3 rounded bg-white/15" style={{ width: (w * 100) + "%" }} />)}</div>
-                  : <p className="text-white/90 italic text-sm leading-relaxed">{report}</p>}
+                  : <RaceReportBody text={report} />
               </div>
             </div>
             {!radioLoading && (radioWinner || radioFocus) && (
@@ -1261,24 +1342,7 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
           </div>
         )}
 
-        {/* ── BOTTOM BUTTONS ── */}
-        <div className="pt-4 pb-10 space-y-3">
-          {round < TOTAL_ROUNDS ? (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={onNextRace} className="py-4 font-black uppercase tracking-wider text-white rounded hover:opacity-90" style={{ background: F1_RED }}>Next Race →</button>
-                <button type="button" onClick={onSimulateToEnd} className="py-4 font-black uppercase tracking-wider rounded hover:opacity-90 border-2" style={{ background: "transparent", borderColor: F1_RED, color: F1_RED }}>Simulate to End</button>
-              </div>
-              <p className="text-center text-white/30 text-xs">{TOTAL_ROUNDS - round} races remaining</p>
-            </>
-          ) : (
-            <button type="button" onClick={onFinishSeason} className="w-full py-4 font-black uppercase tracking-wider text-white rounded hover:opacity-90" style={{ background: F1_RED }}>View Championship Finale →</button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+       
 
 // ─── FINALE SCREEN ────────────────────────────────────────────────────────
 function FinaleScreen({ seasonResults, driverStandings, constructorStandings, focusDriverId, onPlayAgain }) {
@@ -1330,6 +1394,7 @@ function FinaleScreen({ seasonResults, driverStandings, constructorStandings, fo
 
   return (
     <div className="min-h-screen text-white" style={{ background: BG_DARK, fontFamily: "var(--font-titillium)" }}>
+  <RaceActionBar round={round} totalRounds={TOTAL_ROUNDS} onNextRace={onNextRace} onSimulateToEnd={onSimulateToEnd} onFinishSeason={onFinishSeason} />
       <div className="border-b" style={{ borderColor: PANEL_BORDER }}>
         <div className="max-w-5xl mx-auto px-4 pt-10 pb-4 text-center">
           <p className="text-xs uppercase tracking-widest text-white/40 mb-1">2026 Season Complete</p>
@@ -1742,19 +1807,20 @@ export default function SingleSeasonPage() {
   }
 
   return (
-    <RaceRevealScreen
-      raceResult={currentRaceResult}
-      round={currentRound}
-      race={currentRace}
-      driverStandings={driverStandings}
-      constructorStandings={constructorStandings}
-      previousRaceWinner={previousRaceWinner}
-      focusDriverId={focusDriverId}
-      seasonResults={seasonResults}
-      onNextRace={handleNextRace}
-      onFinishSeason={() => setScreen("finale")}
-      onSimulateToEnd={handleSimulateToEnd}
-    />
+   <RaceRevealScreen
+  raceResult={currentRaceResult}
+  round={currentRound}
+  race={currentRace}
+  driverStandings={driverStandings}
+  constructorStandings={constructorStandings}
+  previousRaceWinner={previousRaceWinner}
+  focusDriverId={focusDriverId}
+  seasonResults={seasonResults}
+  onNextRace={handleNextRace}
+  onFinishSeason={() => setScreen("finale")}
+  onSimulateToEnd={handleSimulateToEnd}
+  onRestartSeason={() => { setScreen("setup"); setSeasonResults([]); setCurrentRound(0); setCurrentRaceResult(null); }}
+/>
   );
 
   // ── Loading / tension screen ──────────────────────────────────────────
