@@ -115,20 +115,18 @@ function getTrackTemp(race, weather) {
 function buildQualifyingData(qualifyingOrder, drivers, teams, weather, seed) {
   if (!qualifyingOrder || qualifyingOrder.length === 0) return { q1: [], q2: [], q3: [] };
 
-  // Seeded noise per driver per session — different seed per session so orders genuinely differ
   const noise = (driverId, session, attempt) => {
     const h = (s) => { let v = 0; for (let i = 0; i < s.length; i++) v = Math.imul(31, v) + s.charCodeAt(i) | 0; return v; };
     const n = h(driverId + session + attempt + seed);
     const x = Math.sin(n) * 43758.5453;
-    return x - Math.floor(x); // 0–1
+    return x - Math.floor(x);
   };
 
   const isWet = weather === "wet";
   const isMixed = weather === "mixed";
   const baseTime = isWet ? 104.5 : isMixed ? 97.8 : 87.2;
-  const spread = 3.8; // seconds between P1 and P20
+  const spread = 3.8;
 
-  // Score each driver using their actual attributes
   const scoreDriver = (id, sessionSeed) => {
     const d = getDriver(drivers, id);
     const t = d ? getTeam(teams, d.teamId) : null;
@@ -137,26 +135,22 @@ function buildQualifyingData(qualifyingOrder, drivers, teams, weather, seed) {
     const consistency = d.consistency ?? 75;
     const wet = d.wetWeather ?? 75;
     const teamPace = t.basePace ?? 80;
-    // Weight varies by condition
     const score = isWet
       ? wet * 0.45 + pace * 0.25 + teamPace * 0.20 + consistency * 0.10
       : isMixed
       ? wet * 0.25 + pace * 0.30 + teamPace * 0.30 + consistency * 0.15
       : teamPace * 0.50 + pace * 0.30 + consistency * 0.20;
-    // Add session-specific noise (±2.5 points worth of randomness)
     const n = noise(id, sessionSeed, "score");
     return score + (n - 0.5) * 5.0;
   };
 
   const fmt = (s) => { const m = Math.floor(s / 60); return m + ":" + (s % 60).toFixed(3).padStart(6, "0"); };
 
-  // Map score → lap time: highest score = fastest time
   const scoreToTime = (score, maxScore, minScore, deltaImprovement) => {
     const norm = maxScore === minScore ? 0.5 : (score - minScore) / (maxScore - minScore);
     return baseTime + spread * (1 - norm) - deltaImprovement + (Math.random() * 0.18 - 0.09);
   };
 
-  // Q1 — all drivers, independent scoring
   const q1Scores = qualifyingOrder.map((id) => ({ id, score: scoreDriver(id, "q1") }));
   const q1Max = Math.max(...q1Scores.map((s) => s.score));
   const q1Min = Math.min(...q1Scores.map((s) => s.score));
@@ -168,7 +162,6 @@ function buildQualifyingData(qualifyingOrder, drivers, teams, weather, seed) {
     pos: i + 1,
   }));
 
-  // Q2 — top 15 from Q1, re-scored with fresh noise (drivers push harder)
   const q2Pool = q1Sorted.slice(0, 15).map((s) => s.id);
   const q2Scores = q2Pool.map((id) => ({ id, score: scoreDriver(id, "q2") }));
   const q2Max = Math.max(...q2Scores.map((s) => s.score));
@@ -181,7 +174,6 @@ function buildQualifyingData(qualifyingOrder, drivers, teams, weather, seed) {
     pos: i + 1,
   }));
 
-  // Q3 — top 10 from Q2, fastest laps, another fresh score
   const q3Pool = q2Sorted.slice(0, 10).map((s) => s.id);
   const q3Scores = q3Pool.map((id) => ({ id, score: scoreDriver(id, "q3") }));
   const q3Max = Math.max(...q3Scores.map((s) => s.score));
