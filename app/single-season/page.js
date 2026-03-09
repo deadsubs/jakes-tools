@@ -1204,15 +1204,35 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
         </div>
       </div>
 
-      <RaceActionBar
-        round={round}
-        totalRounds={TOTAL_ROUNDS}
-        onNextRace={onNextRace}
-        onSimulateToEnd={onSimulateToEnd}
-        onFinishSeason={onFinishSeason}
-      />
-
       <div className="sticky z-20 border-b" style={{ top: "var(--header-h, 130px)", background: BG_DARK + "f5", borderColor: PANEL_BORDER, backdropFilter: "blur(8px)" }}>
+        <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
+          {round >= TOTAL_ROUNDS ? (
+            <button type="button" onClick={onFinishSeason}
+              className="flex-1 py-2.5 font-black uppercase tracking-wider text-white rounded text-sm hover:opacity-90 transition-all"
+              style={{ background: F1_RED }}>
+              View Championship Finale →
+            </button>
+          ) : (
+            <>
+              <button type="button" onClick={onNextRace}
+                className="flex-1 py-2.5 font-black uppercase tracking-wider text-white rounded text-sm hover:opacity-90 transition-all"
+                style={{ background: F1_RED }}>
+                {"Next Race: R" + (round + 1) + " →"}
+              </button>
+              <button type="button" onClick={onSimulateToEnd}
+                className="py-2.5 px-5 font-black uppercase tracking-wider rounded text-sm hover:opacity-90 transition-all border-2 whitespace-nowrap"
+                style={{ background: "transparent", borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.6)" }}>
+                Simulate to End
+              </button>
+              <span className="text-white/25 text-xs whitespace-nowrap shrink-0">
+                {(TOTAL_ROUNDS - round) + " left"}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+<div className="sticky z-20 border-b" style={{ top: "130px", background: BG_DARK + "f5", borderColor: PANEL_BORDER, backdropFilter: "blur(8px)" }}>
         <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
           {round >= TOTAL_ROUNDS ? (
             <button type="button" onClick={onFinishSeason}
