@@ -1341,8 +1341,6 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
             )}
           </div>
         )}
-
-               </div>
       </div>
     </div>
   );
