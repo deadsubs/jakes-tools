@@ -1568,6 +1568,7 @@ export default function SingleSeasonPage() {
         seasonResults={seasonResults}
         driverStandings={driverStandings}
         constructorStandings={constructorStandings}
+        focusDriverId={focusDriverId}
         onPlayAgain={() => { setScreen("setup"); setSeasonResults([]); setCurrentRound(0); setCurrentRaceResult(null); }}
       />
     );
