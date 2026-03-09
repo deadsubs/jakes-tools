@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { TEAMS, DRIVERS, RACES, SIMULATION_MODES } from "@/lib/f1Data";
+import { TEAMS, DRIVERS, RACES, SIMULATION_MODES, RESERVE_DRIVERS } from "@/lib/f1Data";
 import { simulateSingleRace } from "@/lib/simulationEngine";
 
 const F1_RED = "#E10600";
@@ -118,6 +118,198 @@ function buildQualifyingData(qualifyingOrder, drivers, teams, weather, seed) {
   return { q1, q2, q3 };
 }
 
+// ─── DRIVER FOCUS PICKER ─────────────────────────────────────────────────
+function DriverFocusPicker({ focusDriverId, setFocusDriverId, gridDrivers, onSwapConfirm }) {
+  const [showReserves, setShowReserves] = useState(false);
+  const [swapMode, setSwapMode] = useState(false);
+  const [swapSource, setSwapSource] = useState(null);
+  const [swapTarget, setSwapTarget] = useState(null);
+  const [localGrid, setLocalGrid] = useState(gridDrivers);
+
+  const teamRows = TEAMS.map((team) => ({
+    team,
+    drivers: localGrid.filter((d) => d.teamId === team.id),
+  })).filter((r) => r.drivers.length > 0);
+
+  const allReserves = RESERVE_DRIVERS.filter((r) => !localGrid.find((g) => g.id === r.id));
+
+  const selectedDriver = localGrid.find((d) => d.id === focusDriverId) ?? allReserves.find((d) => d.id === focusDriverId);
+  const selectedTeam = selectedDriver ? getTeam(TEAMS, selectedDriver.teamId) : null;
+
+  function handleGridDriverClick(d) {
+    if (swapMode) {
+      setSwapSource(swapSource === d.id ? null : d.id);
+      setSwapTarget(null);
+    } else {
+      setFocusDriverId(d.id);
+    }
+  }
+
+  function handleReserveClick(r) {
+    if (!swapMode) { setFocusDriverId(r.id); return; }
+    if (!swapSource) return;
+    setSwapTarget(r.id);
+  }
+
+  function confirmSwap() {
+    if (!swapSource || !swapTarget) return;
+    const src = localGrid.find((d) => d.id === swapSource);
+    const tgt = RESERVE_DRIVERS.find((d) => d.id === swapTarget);
+    if (!src || !tgt) return;
+    const newGrid = localGrid.map((d) =>
+      d.id === swapSource ? { ...tgt, teamId: src.teamId, number: src.number } : d
+    );
+    setLocalGrid(newGrid);
+    onSwapConfirm(newGrid);
+    if (focusDriverId === swapSource) setFocusDriverId(swapTarget);
+    setSwapSource(null); setSwapTarget(null); setSwapMode(false); setShowReserves(false);
+  }
+
+  const ratingBar = (val) => (
+    <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+      <div className="h-full rounded-full" style={{ width: val + "%", background: val >= 90 ? "#22c55e" : val >= 80 ? "#facc15" : val >= 70 ? "#f97316" : "#ef4444" }} />
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-white/60 uppercase tracking-wider">Focus driver</p>
+        <div className="flex gap-2">
+          {swapMode ? (
+            <>
+              {swapSource && swapTarget && (
+                <button type="button" onClick={confirmSwap}
+                  className="text-xs px-3 py-1.5 rounded font-bold"
+                  style={{ background: "#22c55e", color: "#000" }}>
+                  Confirm swap ✓
+                </button>
+              )}
+              <button type="button" onClick={() => { setSwapMode(false); setSwapSource(null); setSwapTarget(null); }}
+                className="text-xs px-3 py-1.5 rounded font-bold border"
+                style={{ borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.6)" }}>
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={() => { setSwapMode(true); setShowReserves(true); }}
+              className="text-xs px-3 py-1.5 rounded font-bold border hover:bg-white/5 transition-all"
+              style={{ borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.6)" }}>
+              ⇄ Swap seats
+            </button>
+          )}
+        </div>
+      </div>
+
+      {swapMode && (
+        <div className="rounded-lg px-4 py-2.5 text-xs border" style={{ background: "rgba(225,6,0,0.08)", borderColor: F1_RED + "44" }}>
+          {!swapSource ? <span style={{ color: "#ffaa44" }}>① Select a grid driver to replace</span>
+            : !swapTarget ? <span style={{ color: "#ffaa44" }}>② Select a reserve driver to bring in</span>
+            : <span style={{ color: "#22c55e" }}>Ready — confirm the swap above</span>}
+        </div>
+      )}
+
+      {/* Selected driver card */}
+      {selectedDriver && (
+        <div className="rounded-lg px-4 py-3 border flex items-center gap-4"
+          style={{ background: selectedTeam?.color ? selectedTeam.color + "14" : PANEL_BG, borderColor: selectedTeam?.color ? selectedTeam.color + "55" : PANEL_BORDER }}>
+          <div className="text-3xl font-black shrink-0 w-12 text-center" style={{ color: selectedTeam?.color ?? F1_RED }}>
+            {selectedDriver.number ?? "—"}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-white text-base leading-tight">{selectedDriver.flag} {selectedDriver.name}</p>
+            <p className="text-xs mt-0.5" style={{ color: selectedTeam?.color ?? "rgba(255,255,255,0.4)" }}>
+              {selectedTeam?.name ?? (selectedDriver.status === "reserve" ? "Reserve driver" : "F2")}
+            </p>
+          </div>
+          <div className="space-y-1.5 shrink-0 w-32">
+            {[["Pace", selectedDriver.pace], ["Consistency", selectedDriver.consistency], ["Wet", selectedDriver.wetWeather]].map(([label, val]) => (
+              <div key={label} className="flex items-center gap-2">
+                <span className="text-white/40 text-xs w-16 text-right">{label}</span>
+                {ratingBar(val)}
+                <span className="text-xs font-bold text-white w-6 text-right">{val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Grid grouped by team */}
+      <div className="rounded-lg border overflow-hidden" style={{ borderColor: PANEL_BORDER }}>
+        {teamRows.map(({ team, drivers }, ti) => (
+          <div key={team.id} className={ti > 0 ? "border-t" : ""} style={{ borderColor: PANEL_BORDER }}>
+            <div className="px-3 py-1.5 flex items-center gap-2" style={{ background: team.color + "18" }}>
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: team.color }} />
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: team.color }}>{team.name}</span>
+            </div>
+            <div className="grid grid-cols-2">
+              {drivers.map((d, di) => {
+                const isFocus = d.id === focusDriverId;
+                const isSwapSource = swapSource === d.id;
+                return (
+                  <button key={d.id} type="button" onClick={() => handleGridDriverClick(d)}
+                    className={"flex items-center gap-3 px-3 py-2.5 text-left transition-all hover:bg-white/5" + (di === 0 ? " border-r" : "")}
+                    style={{ borderColor: PANEL_BORDER, background: isSwapSource ? F1_RED + "18" : isFocus ? team.color + "18" : undefined, outline: "2px solid " + (isSwapSource ? F1_RED : isFocus ? team.color : "transparent"), outlineOffset: "-2px" }}>
+                    <span className="font-black shrink-0 w-7 text-center" style={{ color: team.color, fontSize: "14px" }}>{d.number}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white leading-tight truncate">{d.flag} {d.short}</p>
+                      <p className="text-xs leading-tight truncate" style={{ color: "rgba(255,255,255,0.4)" }}>{d.name.split(" ").pop()}</p>
+                    </div>
+                    <span className="ml-auto text-xs shrink-0">
+                      {isSwapSource ? <span style={{ color: F1_RED }}>⇄</span> : isFocus ? <span style={{ color: team.color }}>●</span> : null}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Reserve pool */}
+      <button type="button" onClick={() => setShowReserves((v) => !v)}
+        className="w-full text-left px-4 py-3 rounded-lg border flex items-center justify-between hover:bg-white/5 transition-all"
+        style={{ background: PANEL_BG, borderColor: PANEL_BORDER }}>
+        <span className="text-sm font-bold text-white/70">
+          Reserve &amp; F2 drivers <span className="text-white/30 font-normal text-xs">({allReserves.length} available)</span>
+        </span>
+        <span className="text-white/40 text-sm">{showReserves ? "▲" : "▼"}</span>
+      </button>
+
+      {showReserves && (
+        <div className="rounded-lg border overflow-hidden" style={{ borderColor: PANEL_BORDER }}>
+          {allReserves.map((r) => {
+            const isFocus = r.id === focusDriverId;
+            const isSwapTarget = swapTarget === r.id;
+            const disabled = swapMode && !swapSource;
+            return (
+              <button key={r.id} type="button" onClick={() => !disabled && handleReserveClick(r)}
+                className={"w-full flex items-center gap-3 px-4 py-2.5 text-left border-b transition-all" + (disabled ? " opacity-40 cursor-not-allowed" : " hover:bg-white/5")}
+                style={{ borderColor: PANEL_BORDER, background: isSwapTarget ? "#22c55e18" : isFocus ? F1_RED + "18" : undefined, outline: isSwapTarget ? "2px solid #22c55e" : isFocus ? "2px solid " + F1_RED : undefined, outlineOffset: "-2px" }}>
+                <span className="text-sm shrink-0">{r.flag}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white leading-tight truncate">{r.name}</p>
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{r.short} · Reserve</p>
+                </div>
+                <div className="flex gap-3 items-center shrink-0">
+                  {[["P", r.pace], ["C", r.consistency], ["W", r.wetWeather]].map(([lbl, val]) => (
+                    <div key={lbl} className="flex flex-col items-center">
+                      <span className="text-xs font-bold text-white">{val}</span>
+                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{lbl}</span>
+                    </div>
+                  ))}
+                </div>
+                {isSwapTarget && <span className="text-xs ml-1" style={{ color: "#22c55e" }}>✓</span>}
+                {isFocus && !isSwapTarget && <span className="text-xs ml-1" style={{ color: F1_RED }}>●</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SLIDER ───────────────────────────────────────────────────────────────
 function Slider({ label, value, min, max, step = 1, onChange, description, colorHigh }) {
   const pct = ((value - min) / (max - min)) * 100;
@@ -141,7 +333,7 @@ function Slider({ label, value, min, max, step = 1, onChange, description, color
 }
 
 // ─── SETUP SCREEN ─────────────────────────────────────────────────────────
-function SetupScreen({ onBegin, simulationMode, setSimulationMode, focusDriverId, setFocusDriverId, advancedConfig, setAdvancedConfig }) {
+function SetupScreen({ onBegin, simulationMode, setSimulationMode, focusDriverId, setFocusDriverId, advancedConfig, setAdvancedConfig, gridDrivers, onSwapConfirm }) {
   const drivers = getActiveDrivers(DRIVERS);
   const realistic = SIMULATION_MODES.realistic;
   const wildcard = SIMULATION_MODES.wildcard;
@@ -220,24 +412,12 @@ function SetupScreen({ onBegin, simulationMode, setSimulationMode, focusDriverId
             )}
           </div>
 
-          <div>
-            <p className="text-sm text-white/60 uppercase tracking-wider mb-3">Focus driver</p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {drivers.map((d) => {
-                const team = getTeam(TEAMS, d.teamId);
-                const selected = focusDriverId === d.id;
-                return (
-                  <button key={d.id} type="button" onClick={() => setFocusDriverId(d.id)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border transition-all"
-                    style={{ background: selected ? F1_RED : PANEL_BG, borderColor: selected ? F1_RED : "rgba(255,255,255,0.2)", color: "#fff" }}>
-                    <span>{d.flag}</span>
-                    <span>{d.name.split(" ").pop()}</span>
-                    {team && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: team.color }} />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <DriverFocusPicker
+            focusDriverId={focusDriverId}
+            setFocusDriverId={setFocusDriverId}
+            gridDrivers={gridDrivers}
+            onSwapConfirm={onSwapConfirm}
+          />
         </div>
 
         <div className="mt-12 grid grid-cols-2 gap-4">
@@ -1269,18 +1449,18 @@ export default function SingleSeasonPage() {
     wetWeatherBoost: 5,
     dnfRate: 5,
   });
+  const [gridDrivers, setGridDrivers] = useState(() => getActiveDrivers(DRIVERS));
 
-  const drivers = useMemo(() => getActiveDrivers(DRIVERS), []);
+  const drivers = useMemo(() => gridDrivers, [gridDrivers]);
   const driverStandings = useMemo(() => buildDriverStandings(seasonResults, drivers), [seasonResults, drivers]);
   const constructorStandings = useMemo(() => buildConstructorStandings(seasonResults, TEAMS), [seasonResults]);
   const currentRace = currentRound >= 1 && currentRound <= TOTAL_ROUNDS ? GP_RACES[currentRound - 1] : null;
   const previousRaceWinner = seasonResults.length >= 2 ? getDriver(drivers, seasonResults[seasonResults.length - 2]?.results?.[0]?.driverId)?.name : null;
 
-  // Inline config directly — avoids stale closure issues with Simulate to End
   const simulateRound = useCallback((round) => {
     const race = GP_RACES[round - 1];
     if (!race) return null;
-    const result = simulateSingleRace(race, round, drivers, TEAMS, {
+    const result = simulateSingleRace(race, round, gridDrivers, TEAMS, {
       chaosLevel: advancedConfig.chaosLevel,
       safetyCarFrequency: advancedConfig.safetyCarFrequency,
       upgradesEnabled: advancedConfig.upgradesEnabled,
@@ -1288,7 +1468,7 @@ export default function SingleSeasonPage() {
     });
     result.race = race;
     return result;
-  }, [drivers, advancedConfig.chaosLevel, advancedConfig.safetyCarFrequency, advancedConfig.upgradesEnabled, focusDriverId]);
+  }, [gridDrivers, advancedConfig.chaosLevel, advancedConfig.safetyCarFrequency, advancedConfig.upgradesEnabled, focusDriverId]);
 
   const handleBeginSeason = useCallback((mode) => {
     if (mode === "full") {
@@ -1341,7 +1521,7 @@ export default function SingleSeasonPage() {
   }, [currentRound, simulateRound]);
 
   if (screen === "setup") {
-    return <SetupScreen onBegin={handleBeginSeason} simulationMode={simulationMode} setSimulationMode={setSimulationMode} focusDriverId={focusDriverId} setFocusDriverId={setFocusDriverId} advancedConfig={advancedConfig} setAdvancedConfig={setAdvancedConfig} />;
+    return <SetupScreen onBegin={handleBeginSeason} simulationMode={simulationMode} setSimulationMode={setSimulationMode} focusDriverId={focusDriverId} setFocusDriverId={setFocusDriverId} advancedConfig={advancedConfig} setAdvancedConfig={setAdvancedConfig} gridDrivers={gridDrivers} onSwapConfirm={setGridDrivers} />;
   }
 
   if (screen === "finale") {
