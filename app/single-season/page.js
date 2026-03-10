@@ -605,9 +605,10 @@ function SetupScreen({ onBegin, simulationMode, setSimulationMode, focusDriverId
                   Full Season
                 </button>
               </div>
-              <p className="text-white/30 text-xs text-center">
+             <p className="text-white/30 text-xs text-center">
                 Race by Race: simulate one race at a time · Full Season: jump straight to the finale
               </p>
+              <p className="text-white/15 text-xs text-center mt-1">Fan project · Not affiliated with Formula 1 or FOM</p>
             </div>
           </div>
 
@@ -1252,6 +1253,7 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
      ↺ Restart Season
    </button>
           <Link href="/simulator" className="text-xs font-bold px-3 py-1 rounded border transition-all hover:bg-white/10" style={{ borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.6)" }}>Franchise Mode →</Link>
+          <span className="text-white/20 text-xs">Fan project · Not affiliated with Formula 1 or FOM</span>
         </div>
         <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
