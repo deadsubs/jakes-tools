@@ -612,8 +612,10 @@ function QualiSessionPanel({ label, rows, drivers, teams, focusDriverId, isQ3 })
                 style={{ borderColor: PANEL_BORDER, background: isPole ? "rgba(255,215,0,0.08)" : isFocus ? "rgba(225,6,0,0.12)" : undefined, opacity: row.eliminated ? 0.45 : 1 }}>
                 <td className="pl-4 py-3 w-8 text-white/40 font-mono text-xs">{row.pos}</td>
                 <td className="py-3 w-3">{t && <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: t.color }} />}</td>
-                <td className="py-3 pl-2 text-white font-medium text-xs">{d?.flag} {d?.short ?? d?.name ?? row.driverId}</td>
-                <td className="py-3 text-white/40 text-xs hidden sm:table-cell">{t?.shortName ?? t?.name}</td>
+                <td className="py-3 pl-2" colSpan={2}>
+                  <p className="text-white font-medium text-xs leading-tight">{d?.flag} {d?.name ?? row.driverId}</p>
+                  <p className="text-white/35 leading-tight mt-0.5" style={{ fontSize: "10px" }}>{t?.name}</p>
+                </td>
                 <td className="pr-2 py-3 text-right font-mono text-xs" style={{ color: isPole ? GOLD : row.eliminated ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.8)" }}>
                   {isPole && "🏆 "}{row.time}
                 </td>
@@ -1253,7 +1255,7 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
         </div>
       </div>
 
-      <div className="sticky z-20 border-b" style={{ top: "var(--header-h, 130px)", background: BG_DARK + "f5", borderColor: PANEL_BORDER, backdropFilter: "blur(8px)" }}>
+      <div className="sticky z-20 border-b -mt-px" style={{ top: "var(--header-h, 130px)", background: BG_DARK + "f5", borderColor: PANEL_BORDER, backdropFilter: "blur(8px)" }}>
         <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3">
           {round >= TOTAL_ROUNDS ? (
             <button type="button" onClick={onFinishSeason}
@@ -1341,9 +1343,9 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
                 <div className="px-3 py-2 border-b" style={{ borderColor: PANEL_BORDER }}><span className="text-xs font-black tracking-widest" style={{ color: F1_RED }}>TYRE STRATEGY</span></div>
                 <TyreStrategy tyreStints={raceResult.tyreStints || {}} results={raceResult.results} drivers={drivers} teams={TEAMS} focusDriverId={focusDriverId} />
               </div>
-              {/* Championship standings — two cols, full width below */}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+                 </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border overflow-hidden" style={{ background: PANEL_BG, borderColor: PANEL_BORDER }}>
                   <div className="px-3 py-2 border-b" style={{ borderColor: PANEL_BORDER }}><span className="text-xs font-black tracking-widest" style={{ color: F1_RED }}>DRIVERS</span></div>
                   <div className="py-1">
@@ -1384,7 +1386,6 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
                       );
                     })}
                   </div>
-              </div>
             </div>
           </div>
         )}
