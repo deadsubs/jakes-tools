@@ -1310,7 +1310,8 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
         )}
 
         {/* ── RACE TAB ── */}
-        {activeTab === "race" && (
+          {activeTab === "race" && (
+          <div className="space-y-4">
           <div className="grid grid-cols-5 gap-4">
             {/* LEFT — winner card + full results */}
             <div className="col-span-2 space-y-3">
@@ -1345,7 +1346,7 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-lg border overflow-hidden" style={{ background: PANEL_BG, borderColor: PANEL_BORDER }}>
                   <div className="px-3 py-2 border-b" style={{ borderColor: PANEL_BORDER }}><span className="text-xs font-black tracking-widest" style={{ color: F1_RED }}>DRIVERS</span></div>
                   <div className="py-1">
@@ -1386,6 +1387,7 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
                       );
                     })}
                   </div>
+                    </div>
           </div>
         )}
 
