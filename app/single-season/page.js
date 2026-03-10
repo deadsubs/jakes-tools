@@ -1333,7 +1333,7 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
               </div>
             </div>
 
-            {/* RIGHT — lap chart, tyres, standings */}
+           {/* RIGHT — lap chart, tyres */}
             <div className="col-span-3 space-y-3">
               <div className="rounded-lg border overflow-hidden" style={{ background: PANEL_BG, borderColor: PANEL_BORDER }}>
                 <div className="px-3 py-2 border-b" style={{ borderColor: PANEL_BORDER }}><span className="text-xs font-black tracking-widest" style={{ color: F1_RED }}>LAP CHART</span></div>
@@ -1343,10 +1343,9 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
                 <div className="px-3 py-2 border-b" style={{ borderColor: PANEL_BORDER }}><span className="text-xs font-black tracking-widest" style={{ color: F1_RED }}>TYRE STRATEGY</span></div>
                 <TyreStrategy tyreStints={raceResult.tyreStints || {}} results={raceResult.results} drivers={drivers} teams={TEAMS} focusDriverId={focusDriverId} />
               </div>
-                 </div>
-              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+          </div>
+          <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border overflow-hidden" style={{ background: PANEL_BG, borderColor: PANEL_BORDER }}>
                   <div className="px-3 py-2 border-b" style={{ borderColor: PANEL_BORDER }}><span className="text-xs font-black tracking-widest" style={{ color: F1_RED }}>DRIVERS</span></div>
                   <div className="py-1">
