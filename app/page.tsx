@@ -41,31 +41,33 @@ export default function HomePage() {
               </div>
             </div>
           </Link>
-          {/* Franchise Mode */}
-          <Link href="/simulator" className="group block">
+          {/* Franchise Mode — coming soon */}
+          <div className="block opacity-60 cursor-not-allowed">
             <div
-              className="rounded-xl p-8 border transition-all duration-200 group-hover:scale-[1.02]"
+              className="rounded-xl p-8 border"
               style={{
                 background: PANEL_BG,
-                borderColor: "#3671C6",
-                boxShadow: "0 0 24px rgba(54,113,198,0.15)",
+                borderColor: "rgba(255,255,255,0.1)",
               }}
             >
-              <div className="text-3xl mb-4">🏆</div>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">🏆</span>
+                <span className="text-xs font-black uppercase tracking-widest px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }}>Coming Soon</span>
+              </div>
               <h2 className="text-xl font-black uppercase tracking-wider mb-2" style={{ fontFamily: "Titillium Web, sans-serif" }}>
                 Franchise Mode
               </h2>
-              <p className="text-white/60 text-sm mb-6">
+              <p className="text-white/40 text-sm mb-6">
                 Simulate a decade of Formula 1. Transfers, retirements, rookies and championship battles across 10 seasons.
               </p>
               <div
-                className="inline-block px-4 py-2 rounded text-sm font-bold uppercase tracking-wider text-white"
-                style={{ background: "#3671C6" }}
+                className="inline-block px-4 py-2 rounded text-sm font-bold uppercase tracking-wider"
+                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)" }}
               >
-                Launch Tool →
+                Coming Soon
               </div>
             </div>
-          </Link>
+          </div>
         </div>
       </div>
     </div>
