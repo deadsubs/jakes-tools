@@ -1410,7 +1410,9 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
                       return (
                         <div key={row.teamId} className="flex items-center gap-1.5 px-3 py-1">
                           <span className="text-sm font-mono w-6 text-white/40 shrink-0">{i + 1}</span>
-                          <div className="flex-1"><TeamTag team={t} /></div>
+                          <div className="flex-1">
+                            {t && <span className="inline-block px-2.5 py-1 rounded font-bold" style={{ background: t.color, color: ["mercedes","haas","williams"].includes(t.id) ? "#000" : "#fff", fontSize: "13px" }}>{t.name}</span>}
+                          </div>
                           <span className="text-sm font-bold text-white shrink-0">{row.points}</span>
                         </div>
                       );
