@@ -296,9 +296,6 @@ const teamPairs = [];
           </div>
         ))}
       </div>
-          </div>
-        ))}
-      </div>
 
       {/* Reserve pool toggle */}
       <button type="button" onClick={() => setShowReserves((v) => !v)}
