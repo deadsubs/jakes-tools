@@ -22,6 +22,18 @@ function getActiveDrivers(drivers) { return drivers.filter((d) => d.status === "
 
 const GP_RACES = RACES.slice(0, TOTAL_ROUNDS).map((r) => ({ ...r, isSprint: false }));
 
+function TeamTag({ team }) {
+  if (!team) return null;
+  const lightTeams = ["mercedes", "haas", "williams"];
+  const isLight = lightTeams.includes(team.id);
+  return (
+    <span className="inline-block px-1.5 py-0.5 rounded text-xs font-bold leading-none"
+      style={{ background: team.color ?? "#333", color: isLight ? "#000" : "#fff", fontSize: "10px" }}>
+      {team.name}
+    </span>
+  );
+}
+
 function buildDriverStandings(raceResults, drivers) {
   const points = {};
   drivers.forEach((d) => (points[d.id] = 0));
@@ -130,10 +142,14 @@ function DriverFocusPicker({ focusDriverId, setFocusDriverId, gridDrivers, onSwa
   const [swapTarget, setSwapTarget] = useState(null);
   const [localGrid, setLocalGrid] = useState(gridDrivers);
 
-  const teamRows = TEAMS.map((team) => ({
+const teamPairs = [];
+  const teamRowsAll = TEAMS.map((team) => ({
     team,
     drivers: localGrid.filter((d) => d.teamId === team.id),
   })).filter((r) => r.drivers.length > 0);
+  for (let i = 0; i < teamRowsAll.length; i += 2) {
+    teamPairs.push(teamRowsAll.slice(i, i + 2));
+  }
 
   const allReserves = RESERVE_DRIVERS.filter((r) => !localGrid.find((g) => g.id === r.id));
   const selectedDriver = localGrid.find((d) => d.id === focusDriverId) ?? allReserves.find((d) => d.id === focusDriverId);
@@ -233,34 +249,53 @@ function DriverFocusPicker({ focusDriverId, setFocusDriverId, gridDrivers, onSwa
         </div>
       )}
 
-      {/* Grid — 2 drivers per team row, teams stacked, fills available height */}
+      {/* Grid — 2 teams per row, 2 drivers per team */}
       <div className="rounded-lg border overflow-hidden flex-1" style={{ borderColor: PANEL_BORDER }}>
-        {teamRows.map(({ team, drivers }, ti) => (
-          <div key={team.id} className={ti > 0 ? "border-t" : ""} style={{ borderColor: PANEL_BORDER }}>
-            <div className="px-3 py-1 flex items-center gap-2" style={{ background: team.color + "18" }}>
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: team.color }} />
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: team.color }}>{team.name}</span>
+        {teamPairs.map((pair, pi) => (
+          <div key={pi} className={pi > 0 ? "border-t" : ""} style={{ borderColor: PANEL_BORDER }}>
+            <div className="grid grid-cols-2 divide-x" style={{ borderColor: PANEL_BORDER }}>
+              {pair.map(({ team, drivers }) => (
+                <div key={team.id}>
+                  <div className="px-2 py-1 flex items-center gap-1.5" style={{ background: team.color + "18" }}>
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: team.color }} />
+                    <span className="text-xs font-bold uppercase tracking-wider truncate" style={{ color: team.color, fontSize: "10px" }}>{team.name}</span>
+                  </div>
+                  <div className="divide-y" style={{ borderColor: PANEL_BORDER }}>
+                    {drivers.map((d) => {
+                      const isFocus = d.id === focusDriverId;
+                      const isSwapSource = swapSource === d.id;
+                      return (
+                        <button key={d.id} type="button" onClick={() => handleGridDriverClick(d)}
+                          className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left transition-all hover:bg-white/5"
+                          style={{ background: isSwapSource ? F1_RED + "18" : isFocus ? team.color + "18" : undefined, outline: "2px solid " + (isSwapSource ? F1_RED : isFocus ? team.color : "transparent"), outlineOffset: "-2px" }}>
+                          <span className="font-black shrink-0 w-5 text-center" style={{ color: team.color, fontSize: "11px" }}>{d.number}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-white leading-tight truncate">{d.flag} {d.short}</p>
+                          </div>
+                          {isSwapSource ? <span className="text-xs" style={{ color: F1_RED }}>⇄</span> : isFocus ? <span className="text-xs" style={{ color: team.color }}>●</span> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Per-driver stats row */}
+                  <div className="grid divide-x" style={{ gridTemplateColumns: "repeat(" + drivers.length + ", 1fr)", borderColor: PANEL_BORDER, borderTop: "1px solid " + PANEL_BORDER }}>
+                    {drivers.map((d) => (
+                      <div key={d.id + "-stats"} className="px-2 py-1 flex gap-2" style={{ background: "rgba(0,0,0,0.2)" }}>
+                        {[["P", d.pace], ["C", d.consistency], ["W", d.wetWeather]].map(([lbl, val]) => (
+                          <div key={lbl} className="flex items-center gap-1">
+                            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "9px" }}>{lbl}</span>
+                            <span className="text-xs font-bold" style={{ color: val >= 88 ? "#4ade80" : val >= 78 ? "#facc15" : val >= 68 ? "#f97316" : "#f87171" }}>{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="grid grid-cols-2">
-              {drivers.map((d, di) => {
-                const isFocus = d.id === focusDriverId;
-                const isSwapSource = swapSource === d.id;
-                return (
-                  <button key={d.id} type="button" onClick={() => handleGridDriverClick(d)}
-                    className={"flex items-center gap-2 px-3 py-2 text-left transition-all hover:bg-white/5" + (di === 0 ? " border-r" : "")}
-                    style={{ borderColor: PANEL_BORDER, background: isSwapSource ? F1_RED + "18" : isFocus ? team.color + "18" : undefined, outline: "2px solid " + (isSwapSource ? F1_RED : isFocus ? team.color : "transparent"), outlineOffset: "-2px" }}>
-                    <span className="font-black shrink-0 w-6 text-center" style={{ color: team.color, fontSize: "13px" }}>{d.number}</span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-white leading-tight truncate">{d.flag} {d.short}</p>
-                      <p className="text-xs leading-tight truncate" style={{ color: "rgba(255,255,255,0.4)", fontSize: "11px" }}>{d.name.split(" ").pop()}</p>
-                    </div>
-                    <span className="ml-auto text-xs shrink-0">
-                      {isSwapSource ? <span style={{ color: F1_RED }}>⇄</span> : isFocus ? <span style={{ color: team.color }}>●</span> : null}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          </div>
+        ))}
+      </div>
           </div>
         ))}
       </div>
@@ -818,11 +853,12 @@ function RaceResultsTable({ results, drivers, teams, focusDriverId }) {
           return (
             <tr key={r.driverId} className="border-b" style={{ borderColor: PANEL_BORDER, background: isFocus ? "rgba(225,6,0,0.12)" : r.dnf ? "rgba(255,255,255,0.01)" : undefined }}>
               <td className="pl-4 py-2 font-black text-sm" style={{ color: r.dnf ? "rgba(255,255,255,0.2)" : medal ?? "rgba(255,255,255,0.8)" }}>{r.dnf ? "DNF" : r.position}</td>
-              <td className="py-2 pr-1">{t && <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: t.color }} />}</td>
-              <td className="py-2 font-medium" style={{ color: r.dnf ? "rgba(255,255,255,0.4)" : "#fff" }}>
-                {d?.flag} {d?.name ?? r.driverId}
+              <td className="py-2 pr-1" />
+              <td className="py-2" style={{ color: r.dnf ? "rgba(255,255,255,0.4)" : "#fff" }}>
+                <p className="font-medium leading-tight">{d?.flag} {d?.name ?? r.driverId}</p>
+                <div className="mt-0.5"><TeamTag team={t} /></div>
               </td>
-              <td className="py-2 text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{t?.name}</td>
+              <td />
                <td className="py-2 text-right text-xs font-mono" style={{ color: r.dnf ? "#f87171" : r.position === 1 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.6)" }}>{r.dnf ? (r.dnfReason ?? "DNF") : r.position === 1 ? "WINNER" : r.gap ?? ""}</td>
               <td className="pr-4 py-2 text-right font-bold" style={{ color: r.points > 0 ? "#fff" : "rgba(255,255,255,0.3)" }}>{r.dnf ? "" : (r.points ?? 0)}</td>
             </tr>
@@ -1355,12 +1391,14 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
                       return (
                         <div key={row.driverId} className="flex items-center gap-1.5 px-3 py-1"
                           style={{ background: isFocus ? "rgba(225,6,0,0.1)" : undefined }}>
-                          <span className="text-sm font-mono w-6 text-white/40">{i + 1}</span>
-                          {t && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: t.color }} />}
-                          <span className="flex-1 text-sm truncate" style={{ color: isFocus ? "#fff" : "rgba(255,255,255,0.85)" }}>{d?.name ?? row.driverId}</span>
+                          <span className="text-sm font-mono w-6 text-white/40 shrink-0">{i + 1}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm leading-tight" style={{ color: isFocus ? "#fff" : "rgba(255,255,255,0.85)" }}>{d?.name ?? row.driverId}</p>
+                            <div className="mt-0.5"><TeamTag team={t} /></div>
+                          </div>
                           {moved && <span className="text-green-400 text-sm">▲</span>}
                           {dropped && <span className="text-red-400 text-sm">▼</span>}
-                          <span className="text-sm font-bold text-white">{row.points}</span>
+                          <span className="text-sm font-bold text-white shrink-0">{row.points}</span>
                         </div>
                       );
                     })}
@@ -1373,10 +1411,9 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
                       const t = getTeam(TEAMS, row.teamId);
                       return (
                         <div key={row.teamId} className="flex items-center gap-1.5 px-3 py-1">
-                          <span className="text-sm font-mono w-6 text-white/40">{i + 1}</span>
-                          {t && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: t.color }} />}
-                          <span className="flex-1 text-sm truncate text-white/85">{t?.name ?? row.teamId}</span>
-                          <span className="text-sm font-bold text-white">{row.points}</span>
+                          <span className="text-sm font-mono w-6 text-white/40 shrink-0">{i + 1}</span>
+                          <div className="flex-1"><TeamTag team={t} /></div>
+                          <span className="text-sm font-bold text-white shrink-0">{row.points}</span>
                         </div>
                       );
                     })}
@@ -1401,7 +1438,7 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
                   <div className="rounded-lg p-4 border-l-4 border" style={{ background: PANEL_BG, borderLeftColor: t?.color ?? F1_RED, borderColor: PANEL_BORDER }}>
                     <p className="text-xs text-white/40 uppercase tracking-wider">Driver of the Day</p>
                     <p className="text-xl font-black text-white mt-1">{d?.flag} {d?.name}</p>
-                    <p className="text-xs mt-0.5" style={{ color: t?.color }}>{t?.name}</p>
+                    <div className="mt-1"><TeamTag team={t} /></div>
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       {[
                         { label: "Quali", value: "P" + qp },
@@ -1451,8 +1488,10 @@ function RaceRevealScreen({ raceResult, round, race, driverStandings, constructo
                   const isFocus = r.driverId === focusDriverId;
                   return (
                     <div key={r.driverId} className="flex items-center gap-2 py-1" style={{ background: isFocus ? "rgba(225,6,0,0.08)" : undefined, borderRadius: "4px" }}>
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: t?.color ?? "#666" }} />
-                      <span className="text-xs flex-1 truncate" style={{ color: isFocus ? "#fff" : "rgba(255,255,255,0.7)" }}>{d?.short ?? d?.name?.split(" ").pop()}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs" style={{ color: isFocus ? "#fff" : "rgba(255,255,255,0.7)" }}>{d?.short ?? d?.name?.split(" ").pop()}</span>
+                        <div><TeamTag team={t} /></div>
+                      </div>
                       <span className="text-xs text-white/30">P{r.qualiPos}→{r.dnf ? "DNF" : "P" + r.finishPos}</span>
                       <span className="text-xs font-bold w-8 text-right" style={{ color: r.delta === null ? "rgba(255,255,255,0.2)" : r.delta > 0 ? "#4ade80" : r.delta < 0 ? "#f87171" : "rgba(255,255,255,0.4)" }}>
                         {r.delta === null ? "DNF" : r.delta > 0 ? "+" + r.delta : r.delta === 0 ? "=" : r.delta}
@@ -1640,8 +1679,11 @@ function FinaleScreen({ seasonResults, driverStandings, constructorStandings, fo
                           onClick={() => setExpandedDriverId(isExpanded ? null : row.driverId)}>
                           <td className="pl-4 py-2.5 font-black text-sm" style={{ color: medal ?? "rgba(255,255,255,0.7)" }}>{i + 1}</td>
                           <td className="py-2.5">{t && <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: t.color }} />}</td>
-                          <td className="py-2.5 font-medium text-white">{d?.flag} {d?.name ?? row.driverId}</td>
-                          <td className="py-2.5 text-xs text-white/50">{t?.name}</td>
+                          <td className="py-2.5">
+                            <p className="font-medium text-white">{d?.flag} {d?.name ?? row.driverId}</p>
+                            <div className="mt-0.5"><TeamTag team={t} /></div>
+                          </td>
+                          <td />
                           <td className="py-2.5 text-right font-bold text-white">{row.points}</td>
                           <td className="py-2.5 text-right text-white/70">{wins[row.driverId] || 0}</td>
                           <td className="py-2.5 text-right text-white/70">{podiums[row.driverId] || 0}</td>
@@ -1743,7 +1785,7 @@ function FinaleScreen({ seasonResults, driverStandings, constructorStandings, fo
                     return (
                       <tr key={row.teamId} className="border-b" style={{ borderColor: PANEL_BORDER }}>
                         <td className="pl-4 py-2.5 font-black" style={{ color: medal ?? "rgba(255,255,255,0.6)" }}>{i + 1}</td>
-                        <td className="py-2.5"><div className="flex items-center gap-2">{t && <span className="w-3 h-3 rounded-full shrink-0" style={{ background: t.color }} />}<span className="text-white font-medium">{t?.name ?? row.teamId}</span></div></td>
+                        <td className="py-2.5"><TeamTag team={t} /></td>
                         <td className="py-2.5 text-right font-bold text-white">{row.points}</td>
                         <td className="pr-4 py-2.5 text-right text-white/60">{tw}</td>
                       </tr>
